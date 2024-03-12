@@ -6,7 +6,13 @@ import { Cart } from "../types";
 import { Products } from "../Products";
 
 const HomePage = () => {
-  const [cart, setCart] = useState<Cart>();
+  // Set initial state, remove undefined, less errors
+  const [cart, setCart] = useState<Cart>({
+    items: [],
+    totalPrice: 0,
+    totalItems: 0,
+    loading: false,
+  });
 
   function onCartChange(cart: Cart) {
     setCart(cart);
@@ -22,7 +28,7 @@ const HomePage = () => {
       <Box flex={1} display="flex" flexDirection="row">
         <Categories />
         <Box flex={1}>
-          <Products onCartChange={onCartChange} />
+          <Products cart={cart} onCartChange={onCartChange} />
         </Box>
       </Box>
     </Box>

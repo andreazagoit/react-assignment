@@ -4,10 +4,16 @@ import { categories } from "./assets/data/categories";
 
 export type Category = undefined | (typeof categories)[number];
 
+export type ProductWithQuantity = {
+  product: Product;
+  quantity: number;
+};
+
 export type Cart = {
-  items: Product[];
+  items: ProductWithQuantity[];
   totalPrice: number;
   totalItems: number;
+  loading: boolean;
 };
 
 export type Product = {

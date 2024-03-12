@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Box,
   Card,
@@ -15,14 +15,16 @@ import AddIcon from "@mui/icons-material/Add";
 import { HeavyComponent } from "./HeavyComponent.tsx";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import useFilterStore from "./state/useFilterStore.ts";
-import { Cart, Product } from "./types";
+import { Cart, Product, ProductWithQuantity } from "./types";
 
-export const Products = ({
-  onCartChange,
-}: {
+interface IProps {
+  cart: Cart;
   onCartChange: (cart: Cart) => void;
-}) => {
-  const [products, setProducts] = useState<Product[]>([]);
+}
+
+export const Products = ({ cart, onCartChange }: IProps) => {
+  /* Not needed, use cart */
+  /* const [products, setProducts] = useState<Product[]>([]); */
 
   // Simplify filter state. Use a global state.
   const search = useFilterStore((state) => state.search);
@@ -52,43 +54,77 @@ export const Products = ({
 
   // Join all the page in a single array with all the products
   const productsList = useMemo(() => {
-    return data ? data.pages.flatMap((page) => page.products) : [];
-  }, [data]);
+    const products = data ? data.pages.flatMap((page) => page.products) : [];
+    const productsWithQuantity = products.map((product) => {
+      const cartItem = cart.items.find(
+        (item) => item.product.id === product.id
+      );
+      return { product, quantity: cartItem?.quantity || 0 };
+    });
 
-  function addToCart(productId: number, quantity: number) {
-    setProducts(
-      products.map((product) => {
-        if (product.id === productId) {
-          return {
-            ...product,
-            loading: true,
-          };
-        }
-        return product;
-      })
+    return productsWithQuantity;
+  }, [data, cart]);
+
+  function addToCart(product: Product, quantity: number) {
+    // Optimistic updates
+
+    // Get prev state in case of error on update
+    const prevCart: Cart = cart;
+
+    // Check if product is present
+    const index = cart.items.findIndex(
+      (item) => item.product.id === product.id
     );
+
+    // Create a copy of the array to apply modifications
+    const updatedItems = [...cart.items];
+
+    // If the product is not found in the cart items push a new item
+    if (index === -1 && quantity !== 0) {
+      updatedItems.push({ product: product, quantity: quantity });
+    } else if (index !== -1) {
+      // If the product is found update its quantity
+      updatedItems[index].quantity += quantity;
+      // Remove the item if the quantity becomes 0
+      /* Not needed, that is done by the backend response */
+      /* if (updatedItems[index].quantity === 0) {
+        updatedItems.splice(index, 1);
+      } */
+    }
+
+    const updatedCart = {
+      items: updatedItems,
+      totalPrice: updatedItems.reduce((acc, item) => {
+        // Calculate the total price of items
+        const itemPrice = item.product.price * item.quantity;
+        return acc + itemPrice;
+      }, 0),
+      totalItems: updatedItems.reduce((acc, item) => {
+        // Calculate the total quantity of each item
+        return acc + item.quantity;
+      }, 0),
+      loading: true,
+    };
+    console.log(3, updatedCart);
+
+    onCartChange(updatedCart);
+
+    console.log(4);
+
+    // ˜For example if we change the link the data is reset to the previous state
     fetch("/cart", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify({ productId: product.id, quantity }),
     }).then(async (response) => {
       if (response.ok) {
         const cart = await response.json();
-        setProducts(
-          products.map((product) => {
-            if (product.id === productId) {
-              return {
-                ...product,
-                itemInCart: (product.itemInCart || 0) + quantity,
-                loading: false,
-              };
-            }
-            return product;
-          })
-        );
-        onCartChange(cart);
+        onCartChange({ ...cart, loading: false });
+      } else {
+        // if response is not ok restore previous cart status
+        onCartChange(prevCart);
       }
     });
   }
@@ -119,7 +155,7 @@ export const Products = ({
   return (
     <Box overflow="scroll" height="100%">
       <Grid container spacing={2} p={2}>
-        {productsList.map((product) => (
+        {productsList.map(({ product, quantity }) => (
           <Grid key={product.id} item xs={4}>
             {/* Do not remove this */}
             <HeavyComponent />
@@ -159,23 +195,27 @@ export const Products = ({
                     {product.loading && <CircularProgress size={20} />}
                   </Box>
                   <IconButton
-                    disabled={product.loading}
+                    disabled={product.loading || cart.loading}
                     aria-label="delete"
                     size="small"
-                    onClick={() => addToCart(product.id, -1)}
+                    onClick={() =>
+                      !cart.loading ? addToCart(product, -1) : null
+                    }
                   >
                     <RemoveIcon fontSize="small" />
                   </IconButton>
 
                   <Typography variant="body1" component="div" mx={1}>
-                    {product.itemInCart || 0}
+                    {quantity || 0}
                   </Typography>
 
                   <IconButton
-                    disabled={product.loading}
+                    disabled={product.loading || cart.loading}
                     aria-label="add"
                     size="small"
-                    onClick={() => addToCart(product.id, 1)}
+                    onClick={() =>
+                      !cart.loading ? addToCart(product, 1) : null
+                    }
                   >
                     <AddIcon fontSize="small" />
                   </IconButton>
