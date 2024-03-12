@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Cart, Products } from "../Products";
 import { Box, CssBaseline } from "@mui/material";
 import SearchAppBar from "../SearchAppBar";
 import { Categories } from "../Categories";
+import { Cart } from "../types";
+import { Products } from "../Products";
 
 const HomePage = () => {
   const [cart, setCart] = useState<Cart>();

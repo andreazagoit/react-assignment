@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Card,
@@ -13,23 +13,9 @@ import {
 import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import { HeavyComponent } from "./HeavyComponent.tsx";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-
-export type Product = {
-  id: number;
-  name: string;
-  imageUrl: string;
-  price: number;
-  category: string;
-  itemInCart: number;
-  loading: boolean;
-};
-
-export type Cart = {
-  items: Product[];
-  totalPrice: number;
-  totalItems: number;
-};
+import { useInfiniteQuery } from "@tanstack/react-query";
+import useFilterStore from "./state/useFilterStore.ts";
+import { Cart, Product } from "./types";
 
 export const Products = ({
   onCartChange,
@@ -38,22 +24,33 @@ export const Products = ({
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
 
+  // Simplify filter state. Use a global state.
+  const search = useFilterStore((state) => state.search);
+  const activeCategory = useFilterStore((state) => state.activeCategory);
+
+  // React query to implement caching for the data
   const { data, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["products"],
+    queryKey: ["products", search, activeCategory],
     queryFn: ({ pageParam }) => fetchPage(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.page + 1 : undefined,
   });
 
+  // Add pagination to the request
   const fetchPage = async (pageParam: number) => {
     try {
-      const results = await fetch(`/products?page=${pageParam}&limit=12`);
+      const results = await fetch(
+        `/products?page=${pageParam}&limit=12${search ? `&q=${search}` : ""}${
+          activeCategory ? `&category=${activeCategory}` : ""
+        }`
+      );
       const parsedResults = await results.json();
       return { ...parsedResults, page: pageParam };
     } catch (error) {}
   };
 
+  // Join all the page in a single array with all the products
   const productsList = useMemo(() => {
     return data ? data.pages.flatMap((page) => page.products) : [];
   }, [data]);
@@ -96,6 +93,7 @@ export const Products = ({
     });
   }
 
+  // Execute infinite query when the user scroll to the end of the page - 300px
   const handleScroll = () => {
     const body = document.body;
     const windowHeight = window.innerHeight;
@@ -109,6 +107,7 @@ export const Products = ({
     }
   };
 
+  // Handling scrolling event that enable the infinite query
   useEffect(() => {
     window.addEventListener("scroll", handleScroll);
 
