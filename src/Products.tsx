@@ -105,11 +105,8 @@ export const Products = ({ cart, onCartChange }: IProps) => {
       }, 0),
       loading: true,
     };
-    console.log(3, updatedCart);
 
     onCartChange(updatedCart);
-
-    console.log(4);
 
     // ˜For example if we change the link the data is reset to the previous state
     fetch("/cart", {

@@ -21,7 +21,6 @@ const useFilterStore = create<FilterState>((set) => ({
     }),
   setCategory: (category: Category) =>
     set((state) => {
-      console.log(category);
       return {
         ...state,
         activeCategory: category,
