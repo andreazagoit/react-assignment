@@ -15,7 +15,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { HeavyComponent } from "./HeavyComponent.tsx";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import useFilterStore from "./state/useFilterStore.ts";
-import { Cart, Product, ProductWithQuantity } from "./types";
+import { Cart, Product } from "./types";
 
 interface IProps {
   cart: Cart;
